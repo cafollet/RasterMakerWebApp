@@ -120,12 +120,17 @@ def create_layer():
 
     outstream_3 = BytesIO()
 
-    generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
-    print("Raster File Generated")
-    write_pix_json(outstream_1, outstream_2)
-    print("Json File Generated")
-    convert_to_alpha(outstream_1, out_fp=outstream_3)
-    print("Successfully Converted Image to LA")
+    try:
+        generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
+        logging.info("Raster File Generated")
+        write_pix_json(outstream_1, outstream_2)
+        logging.info("Json File Generated")
+        convert_to_alpha(outstream_1, out_fp=outstream_3)
+        logging.info("Successfully Converted Image to LA")
+    except Exception as e:
+        logging.info(e)
+
+
 
 
     if not title or not filename or not col_weights or not geom:
@@ -198,11 +203,11 @@ def update_layer(layer_id):
         outstream_3 = BytesIO()
 
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
-        print("Raster File Generated")
+        logging.info("Raster File Generated")
         write_pix_json(outstream_1, outstream_2)
-        print("Json File Generated")
+        logging.info("Json File Generated")
         convert_to_alpha(outstream_1, out_fp=outstream_3)
-        print("Successfully Converted Image to LA")
+        logging.info("Successfully Converted Image to LA")
 
         layer.filename = filename
         layer.col_weights = str(col_weights).replace("'", "\"")
@@ -241,5 +246,8 @@ if __name__ == "__main__":
 
     logger = logging.getLogger('waitress')
     logger.setLevel(logging.INFO)
+
+    logging.basicConfig(filename='app.log', level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
 
     serve(app, host="0.0.0.0", port=8080)
