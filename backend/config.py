@@ -3,11 +3,15 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_migrate import Migrate
+import logging
 
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ['http://localhost:5173', "http://localhost:3000", "https://rastermakerwebapp-frontend.onrender.com"]}})
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+main_logger = logging.getLogger(__name__)
 
 # Temporary URI
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL')

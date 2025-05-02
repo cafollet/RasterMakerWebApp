@@ -3,7 +3,7 @@ import base64
 import logging
 from waitress import serve
 from flask import request, jsonify
-from config import app, db
+from config import app, db, main_logger
 from models import RasterLayer
 from io import BytesIO, StringIO
 from generate_raster_file import generate_raster_file
@@ -90,16 +90,16 @@ def get_json(layer_id):
 
 @app.route("/create_layer", methods=["POST"])
 def create_layer():
-    logging.info("Creating Layer")
+    main_logger.info("Creating Layer")
     file = request.files["file"]
     title = request.form.get("title")
     filename = file.filename
-    logging.info("Successfully grabbed file")
+    main_logger.info("Successfully grabbed file")
 
     col_weights = request.form.get("colWeights")
     col_weights = col_weights.replace("'", "\"")
     col_weights = json.loads(col_weights)
-    logging.info("Successfully grabbed Column Weights")
+    main_logger.info("Successfully grabbed Column Weights")
 
     geom = request.form.get("geom")
     for i, string in enumerate(geom):
@@ -108,8 +108,8 @@ def create_layer():
     geom_x = geom[:prime_index]
     geom_y = geom[prime_index + 1:]
 
-    logging.info("Successfully grabbed geometry columns")
-    logging.info((filename, col_weights, title, geom_y, geom_x))
+    main_logger.info("Successfully grabbed geometry columns")
+    main_logger.info((filename, col_weights, title, geom_y, geom_x))
 
     instream = BytesIO(file.read())
 
@@ -121,13 +121,13 @@ def create_layer():
 
     try:
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
-        logging.info("Raster File Generated")
+        main_logger.info("Raster File Generated")
         write_pix_json(outstream_1, outstream_2)
-        logging.info("Json File Generated")
+        main_logger.info("Json File Generated")
         convert_to_alpha(outstream_1, out_fp=outstream_3)
-        logging.info("Successfully Converted Image to LA")
+        main_logger.info("Successfully Converted Image to LA")
     except Exception as e:
-        logging.info(e)
+        main_logger.info(e)
 
 
 
@@ -202,11 +202,11 @@ def update_layer(layer_id):
         outstream_3 = BytesIO()
 
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
-        logging.info("Raster File Generated")
+        main_logger.info("Raster File Generated")
         write_pix_json(outstream_1, outstream_2)
-        logging.info("Json File Generated")
+        main_logger.info("Json File Generated")
         convert_to_alpha(outstream_1, out_fp=outstream_3)
-        logging.info("Successfully Converted Image to LA")
+        main_logger.info("Successfully Converted Image to LA")
 
         layer.filename = filename
         layer.col_weights = str(col_weights).replace("'", "\"")
@@ -245,8 +245,5 @@ if __name__ == "__main__":
 
     logger = logging.getLogger('waitress')
     logger.setLevel(logging.INFO)
-
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
 
     serve(app, host="0.0.0.0", port=8080)
