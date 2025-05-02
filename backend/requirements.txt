@@ -6,6 +6,7 @@ Flask-Migrate~=4.1.0
 rasterio~=1.4.3
 Pillow~=11.2.1
 pandas~=2.2.3
+psycopg2~=2.9.10
 geopandas~=1.0.1
 scipy~=1.15.2
 xarray~=2025.3.1
