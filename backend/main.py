@@ -246,7 +246,7 @@ if __name__ == "__main__":
     logger = logging.getLogger('waitress')
     logger.setLevel(logging.INFO)
 
-    logging.basicConfig(filename='app.log', level=logging.INFO,
+    logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
     serve(app, host="0.0.0.0", port=8080)
