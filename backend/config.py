@@ -6,7 +6,8 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 CORS(app)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mydatabase.db"
+# Temporary URI
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://rasterlayer_user:1HJakO6qVJe2bl2vMA3GNCOyLRkrdWi5@dpg-d0a6iv0gjchc73bofabg-a/rasterlayer"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
