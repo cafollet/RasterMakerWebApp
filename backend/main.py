@@ -7,6 +7,19 @@ from io import BytesIO, StringIO
 from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
+import git
+
+@app.route('/update_backend', methods=['POST'])
+def webhook():
+    if request.method == 'POST':
+        repo = git.Repo(
+            'https://github.com/cafollet/RasterMakerWebApp'
+            )
+        origin = repo.remotes.origin
+        origin.pull()
+        return 'Updated PythonAnywhere successfully', 200
+    else:
+        return 'Wrong event type', 400
 
 
 @app.route("/layers", methods=["GET"])
