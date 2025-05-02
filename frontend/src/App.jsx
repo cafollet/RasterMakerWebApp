@@ -7,6 +7,7 @@ import './App.css'
 
 export let allOverlays = {}
 export const apiEndpoint = import.meta.env.apiEndpoint // endpoint in environment -- should be localhost when testing locally
+console.log(apiEndpoint);
 
 function removeValue(value, index, arr, valToRemove) {
     if (value !== valToRemove) {
