@@ -85,7 +85,7 @@ def convert_to_alpha(fp: str | BytesIO, replace: Literal[True] | str=True, out_f
         image.save(new_fp+suffix)
     else:
         image.save(out_fp, format="PNG")
-        image.save("../images/test.TIFF", format=format) # check if it works
+        # image.save("../images/test.TIFF", format=format) # check if it works
 
 
 

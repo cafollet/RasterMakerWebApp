@@ -1,7 +1,7 @@
 import json
 import base64
 import logging
-
+from waitress import serve
 from flask import request, jsonify
 from config import app, db
 from models import RasterLayer
@@ -10,6 +10,7 @@ from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
 import git
+import argparse
 
 @app.route('/update_backend', methods=['POST'])
 def webhook():
@@ -231,11 +232,14 @@ def delete_layer(layer_id):
     return jsonify({"message": "Layer deleted!"}), 200
 
 if __name__ == "__main__":
-    logging.info("===================TESTING THIS IS CALLUM HI===================")
+
+
+
     with app.app_context():
         db.drop_all()
         db.create_all()
 
-    from waitress import serve
+    logger = logging.getLogger('waitress')
+    logger.setLevel(logging.INFO)
 
     serve(app, host="0.0.0.0", port=8080)
