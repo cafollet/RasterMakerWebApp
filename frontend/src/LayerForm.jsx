@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ColumnEntry from './ColumnEntry';
 import './LayerForm.css';
-import { apiEndpoint } from "App";
+import { apiEndpoint } from "./App";
 
 const LayerForm = ({ existingLayer = {}, updateCallback}) => {
     const [isSubmitting, setIsSubmitting] = useState(false);

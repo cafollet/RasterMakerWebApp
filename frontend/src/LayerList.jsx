@@ -1,5 +1,5 @@
 import React from "react"
-import { apiEndpoint } from "App";
+import { apiEndpoint } from "./App";
 
 const layerList = ({layers, updateLayer, updateCallback}) => {
     const onDelete = async (id) => {
