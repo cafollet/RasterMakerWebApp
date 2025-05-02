@@ -10,9 +10,12 @@ from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
 import git
-import argparse
+import signal
+import sys
 
-@app.route('/update_backend', methods=['POST'])
+
+# endpoint removed
+"""@app.route('/update_backend', methods=['POST'])
 def webhook():
     if request.method == 'POST':
         repo = git.Repo(
@@ -22,7 +25,11 @@ def webhook():
         origin.pull()
         return 'Updated PythonAnywhere successfully', 200
     else:
-        return 'Wrong event type', 400
+        return 'Wrong event type', 400"""
+
+def handle_sigterm(signum, frame):
+    logging.info(f"Received signal {signum}. Exiting gracefully...")
+    sys.exit(0)
 
 
 @app.route("/layers", methods=["GET"])
@@ -236,8 +243,7 @@ def delete_layer(layer_id):
     return jsonify({"message": "Layer deleted!"}), 200
 
 if __name__ == "__main__":
-
-
+    signal.signal(signal.SIGTERM, handle_sigterm)
 
     with app.app_context():
         db.drop_all()
