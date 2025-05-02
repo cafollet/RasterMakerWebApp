@@ -12,3 +12,4 @@ rioxarray~=0.18.2
 argparse~=1.4.0
 numpy~=2.2.5
 shapely~=2.1.0
+waitress~=3.0.2
