@@ -1,5 +1,7 @@
 import json
 import base64
+import logging
+
 from flask import request, jsonify
 from config import app, db
 from models import RasterLayer
@@ -101,6 +103,13 @@ def create_layer():
             prime_index = i
     geom_x = geom[:prime_index]
     geom_y = geom[prime_index + 1:]
+
+    logging.info(
+        filename,
+        col_weights,
+        title,
+        geom_y,
+        geom_x)
 
     instream = BytesIO(file.read())
 
