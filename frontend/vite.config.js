@@ -8,6 +8,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: ['devserver-master--visionary-stardust-12a862.netlify.app',
-    'http://raster-maker-web-app-5f9m.vercel.app/']
+    'raster-maker-web-app-5f9m.vercel.app']
   }
 })
