@@ -90,13 +90,16 @@ def get_json(layer_id):
 
 @app.route("/create_layer", methods=["POST"])
 def create_layer():
+    logging.info("Creating Layer")
     file = request.files["file"]
     title = request.form.get("title")
     filename = file.filename
+    logging.info("Successfully grabbed file")
 
     col_weights = request.form.get("colWeights")
     col_weights = col_weights.replace("'", "\"")
     col_weights = json.loads(col_weights)
+    logging.info("Successfully grabbed Column Weights")
 
     geom = request.form.get("geom")
     for i, string in enumerate(geom):
@@ -105,6 +108,7 @@ def create_layer():
     geom_x = geom[:prime_index]
     geom_y = geom[prime_index + 1:]
 
+    logging.info("Successfully grabbed geometry columns")
     logging.info((filename, col_weights, title, geom_y, geom_x))
 
     instream = BytesIO(file.read())
