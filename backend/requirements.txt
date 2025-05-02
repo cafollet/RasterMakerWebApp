@@ -1,0 +1,14 @@
+GitPython~=3.1.44
+Flask~=3.1.0
+flask-cors~=5.0.1
+Flask-Migrate~=4.1.0
+rasterio~=1.4.3
+Pillow~=9.3.0
+pandas~=2.2.3
+geopandas~=1.0.1
+scipy~=1.15.2
+xarray~=2025.3.1
+rioxarray~=0.18.2
+argparse~=1.4.0
+numpy~=1.25.2
+shapely~=2.1.0
