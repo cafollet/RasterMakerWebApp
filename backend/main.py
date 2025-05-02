@@ -231,6 +231,7 @@ def delete_layer(layer_id):
     return jsonify({"message": "Layer deleted!"}), 200
 
 if __name__ == "__main__":
+    logging.info("===================TESTING THIS IS CALLUM HI===================")
     with app.app_context():
         db.drop_all()
         db.create_all()
