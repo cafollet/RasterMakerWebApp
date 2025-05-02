@@ -28,7 +28,7 @@ def webhook():
         return 'Wrong event type', 400"""
 
 def handle_sigterm(signum, frame):
-    logging.info(f"Received signal {signum}. Exiting gracefully...")
+    main_logger.info(f"Received signal {signum}. Exiting gracefully...")
     sys.exit(0)
 
 
