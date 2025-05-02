@@ -6,7 +6,7 @@ import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 import './App.css'
 
 export let allOverlays = {}
-export const apiEndpoint = 'https://rastermakerwebapp.onrender.com' // endpoint for now
+export const apiEndpoint = import.meta.env.apiEndpoint // endpoint in environment -- should be localhost when testing locally
 
 function removeValue(value, index, arr, valToRemove) {
     if (value !== valToRemove) {

@@ -289,7 +289,7 @@ const LayerForm = ({ existingLayer = {}, updateCallback}) => {
         totData.append("geom", `${geomX},${geomY}`)
 
 
-        console.log("TOTDATA", totData)
+        // console.log("TOTDATA", totData)
         const url = apiEndpoint + "/" + (updating ? `update_layer/${existingLayer.id}` : "create_layer")
         const options = {
             method: updating ? "PATCH" : "POST",
