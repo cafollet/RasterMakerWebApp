@@ -1,5 +1,5 @@
 import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-import { allOverlays } from './App';
+import { allOverlays, apiEndpoint } from './App';
 
 
 // Initialize the map and set its view to Vancouver
@@ -35,14 +35,14 @@ L.marker([49.2827, -123.1207]).addTo(map)
 // On mouse click, do something -- THIS SHOULD BE MOVED TO MAIN SCRIPT AND ITERATED THROUGH ALL PRESENT LAYERS
 map.on('click', async function (e) {
 
-    const response = await fetch("http://127.0.0.1:5000/layers");
+    const response = await fetch(`${apiEndpoint}/layers`);
     const data = await response.json();
 
     const allLayers = [...data.layers]
     let indexValues = ""
 
     for (let singleLayer in allLayers) {
-        let indivResponse = await fetch(`http://127.0.0.1:5000/get_json/${allLayers[singleLayer].id}`)
+        let indivResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}`)
         let indivData = await indivResponse.json()
 
         console.log(indivData)

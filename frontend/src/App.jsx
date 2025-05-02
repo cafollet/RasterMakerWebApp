@@ -6,6 +6,7 @@ import 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 import './App.css'
 
 export let allOverlays = {}
+export const apiEndpoint = 'https://rastermakerwebapp.onrender.com' // endpoint for now
 
 function removeValue(value, index, arr, valToRemove) {
     if (value !== valToRemove) {
@@ -29,7 +30,7 @@ function App() {
     }, [])
 
     const fetchLayers = async () => {
-        const response = await fetch("http://127.0.0.1:5000/layers")
+        const response = await fetch(`${apiEndpoint}/layers`)
         const data = await response.json()
         setLayers(data.layers)
         let imageLayers = { ...allOverlays };
@@ -39,7 +40,7 @@ function App() {
             let layerId = layer.id;
             console.log(layer);
 
-            let indivResponse = await fetch(`http://127.0.0.1:5000/get_raster/${layerId}`);
+            let indivResponse = await fetch(`${apiEndpoint}/get_raster/${layerId}`);
             let indivData = await indivResponse.json();
             let imageContent = indivData.layerImage.image
             let imageType = indivData.layerImage.contentType

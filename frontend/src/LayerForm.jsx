@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ColumnEntry from './ColumnEntry';
 import './LayerForm.css';
+import { apiEndpoint } from "App";
 
 const LayerForm = ({ existingLayer = {}, updateCallback}) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +21,7 @@ const LayerForm = ({ existingLayer = {}, updateCallback}) => {
         const fetchExistingColumns = async () => {
             if (updating && existingLayer.id) {
                 try {
-                    const response = await fetch(`http://127.0.0.1:5000/get_columns/${existingLayer.id}`);
+                    const response = await fetch(`${apiEndpoint}/get_columns/${existingLayer.id}`);
                     const data = await response.json();
                     const fullColumns = ["Count", ...data.columns];
 
@@ -259,7 +260,7 @@ const LayerForm = ({ existingLayer = {}, updateCallback}) => {
             method: "POST",
             body: totData
         }
-        const response = await fetch("http://127.0.0.1:5000/upload", options)
+        const response = await fetch(`${apiEndpoint}/upload`, options)
         const data = await response.json()
 
         // Initialize the drop-down menu render

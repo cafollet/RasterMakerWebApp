@@ -1,4 +1,5 @@
 import React from "react"
+import { apiEndpoint } from "App";
 
 const layerList = ({layers, updateLayer, updateCallback}) => {
     const onDelete = async (id) => {
@@ -6,7 +7,7 @@ const layerList = ({layers, updateLayer, updateCallback}) => {
             const options = {
                 method: "DELETE"
             }
-            const response = await fetch(`http://127.0.0.1:5000/delete_layer/${id}`, options)
+            const response = await fetch(`${apiEndpoint}/delete_layer/${id}`, options)
             if (response.status === 200) {
                 updateCallback()
             } else {
