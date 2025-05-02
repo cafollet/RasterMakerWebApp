@@ -290,7 +290,7 @@ const LayerForm = ({ existingLayer = {}, updateCallback}) => {
 
 
         console.log("TOTDATA", totData)
-        const url = "http://127.0.0.1:5000/" + (updating ? `update_layer/${existingLayer.id}` : "create_layer")
+        const url = apiEndpoint + "/" + (updating ? `update_layer/${existingLayer.id}` : "create_layer")
         const options = {
             method: updating ? "PATCH" : "POST",
             body: totData
