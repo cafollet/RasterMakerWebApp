@@ -105,12 +105,7 @@ def create_layer():
     geom_x = geom[:prime_index]
     geom_y = geom[prime_index + 1:]
 
-    logging.info(
-        filename,
-        col_weights,
-        title,
-        geom_y,
-        geom_x)
+    logging.info((filename, col_weights, title, geom_y, geom_x))
 
     instream = BytesIO(file.read())
 
