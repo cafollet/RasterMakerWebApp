@@ -89,8 +89,8 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
 
             try:
-                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)))#, workers=-1)
-                main_logger.info("\t\tGrid points Created")
+                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+                main_logger.info("\t\tDistances/indices Created")
             except Exception as e:
                 main_logger.info(f"THERE WAS A PROBLEM: {e}")
 

@@ -14,7 +14,10 @@ logging.basicConfig(level=logging.INFO,
 main_logger = logging.getLogger(__name__)
 
 # Temporary URI
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL')
+if os.environ.get('DATABASE_URL') is None:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mydatabase.db"
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL')
 #"postgresql://rasterlayer_user:1HJakO6qVJe2bl2vMA3GNCOyLRkrdWi5@dpg-d0a6iv0gjchc73bofabg-a/rasterlayer"
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
