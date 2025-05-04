@@ -84,15 +84,12 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
             tree = cKDTree(points, compact_nodes=False, balanced_tree=False)
             main_logger.info("\t\tcKDTree Created")
 
-            try:
-                grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
-                main_logger.info("\t\tGrid points Created")
-            except Exception as e:
-                main_logger.info(f"THERE WAS A PROBLEM: {e}")
+            grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
+            main_logger.info("\t\tGrid points Created")
 
 
             try:
-                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)))#, workers=-1)
                 main_logger.info("\t\tGrid points Created")
             except Exception as e:
                 main_logger.info(f"THERE WAS A PROBLEM: {e}")
