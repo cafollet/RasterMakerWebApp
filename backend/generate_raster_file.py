@@ -83,13 +83,21 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
         if type_ == "IDW" or type_ == "Density":
             tree = cKDTree(points, compact_nodes=False, balanced_tree=False)
             main_logger.info("\t\tcKDTree Created")
+
             try:
                 grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
+                main_logger.info("\t\tGrid points Created")
             except Exception as e:
                 main_logger.info(f"THERE WAS A PROBLEM: {e}")
-            distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
 
-            main_logger.info("\t\tGrid points, and distances/indices Created")
+
+            try:
+                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+                main_logger.info("\t\tGrid points Created")
+            except Exception as e:
+                main_logger.info(f"THERE WAS A PROBLEM: {e}")
+
+
 
             if type_ == "IDW":
                 weights = 1.0 / (distances ** power)
