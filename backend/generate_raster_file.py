@@ -82,8 +82,12 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
     try:
         if type_ == "IDW" or type_ == "Density":
             tree = cKDTree(points, compact_nodes=False, balanced_tree=False)
+            main_logger.info("\t\tcKDTree Created")
+
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
             distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+
+            main_logger.info("\t\tGrid points, and distances/indices Created")
 
             if type_ == "IDW":
                 weights = 1.0 / (distances ** power)
@@ -93,6 +97,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
                 interpolated_values = np.sum(weights * values[indices], axis=1)
         else:
             type_ = type_.lower()
+            main_logger.info("\t\t Type Created")
 
             interpolated_values = scipy.interpolate.griddata(points, values, (grid_x, grid_y), type_, fill_value=0)
 
@@ -149,7 +154,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         # Perform IDW interpolation with values
         interpolated_grid = np.zeros_like(grid_x)
         for key in col_weight:
-            main_logger.info(f"Key{key} loading")
+            main_logger.info(f"Key \"{key}\" loading")
             interpolated_grid += interpolate(coords, cols_weights[key], grid_x, grid_y, col_weight[key][1])
 
         # Find max value and normalize
