@@ -9,7 +9,6 @@ from io import BytesIO, StringIO
 from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
-import git
 import signal
 import sys
 
@@ -125,6 +124,8 @@ def create_layer():
     outstream_2 = StringIO()
 
     outstream_3 = BytesIO()
+
+    main_logger.info("Succesfully Initialized Buffer streams")
 
     try:
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])

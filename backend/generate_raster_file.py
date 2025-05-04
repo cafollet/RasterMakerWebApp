@@ -11,6 +11,7 @@ from shapely.geometry import Point
 from scipy.spatial import cKDTree
 from typing import Literal
 from io import BytesIO
+from config import main_logger
 
 
 def y2lat(y, R):
@@ -99,81 +100,85 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
 
 def generate_raster_file(in_fp, out_fp, col_weight, geom):
+    try:
+        main_logger.info("generate_raster_file Started")
+        # Load and clean up data
+        data = pd.read_csv(in_fp)
+        points = []
+        df = data.drop(data[data[geom[1]] == 0.0].index)
+        df = df.drop(df[df[geom[0]] == 0.0].index)
 
-    # Load and clean up data
-    data = pd.read_csv(in_fp)
-    points = []
-    df = data.drop(data[data[geom[1]] == 0.0].index)
-    df = df.drop(df[df[geom[0]] == 0.0].index)
+        if "Count" in col_weight.keys():
+            df["Count"] = [1 for _ in range(df[list(df.columns)[0]].size)]
 
-    if "Count" in col_weight.keys():
-        df["Count"] = [1 for _ in range(df[list(df.columns)[0]].size)]
+        # Convert geographic coordinates to Mercator points
+        for i, row in df.iterrows():
+            point = Point(mercator((row[geom[1]], row[geom[0]])))
+            points.append(point)
 
-    # Convert geographic coordinates to Mercator points
-    for i, row in df.iterrows():
-        point = Point(mercator((row[geom[1]], row[geom[0]])))
-        points.append(point)
+        # Create GeoDataFrame
+        df['geometry'] = points
+        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+        main_logger.info("\t created and stored GeoDF")
+        # Extract coordinates and values
+        coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
 
-    # Create GeoDataFrame
-    df['geometry'] = points
-    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+        # Compute weighted values
+        cols_weights = {}
+        for key in col_weight:
 
-    # Extract coordinates and values
-    coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
+            keys = list(col_weight.keys())
+            if isinstance(col_weight[key][0], float):
+                val = col_weight[key][0]
+            else:
+                val = float(col_weight[key][0])
+            weighted_values = df[key].values * val
+            cols_weights[key] = weighted_values
 
-    # Compute weighted values
-    cols_weights = {}
-    for key in col_weight:
 
-        keys = list(col_weight.keys())
-        if isinstance(col_weight[key][0], float):
-            val = col_weight[key][0]
+        # Define grid for interpolation
+        xmin, ymin, xmax, ymax = gdf.total_bounds
+        res = 100  # Resolution in meters Originally 50 - maybe this could be added to script args?
+        grid_x, grid_y = np.mgrid[xmin:xmax:res, ymax:ymin:-res]
+        main_logger.info("\t created meshgrid")
+
+        # Perform IDW interpolation with values
+        interpolated_grid = np.zeros_like(grid_x)
+        for key in col_weight:
+            interpolated_grid += interpolate(coords, cols_weights[key], grid_x, grid_y, col_weight[key][1])
+
+        # Find max value and normalize
+        maximum = np.max(interpolated_grid)
+        interpolated_grid = interpolated_grid / maximum
+
+        # Create xarray DataArray
+        da = xr.DataArray(
+            interpolated_grid,
+        dims=["x", "y"],
+            coords={"y": np.arange(ymax, ymin, -res), "x": np.arange(xmin, xmax, res)}
+        )
+        main_logger.info("\t created dataarray")
+
+        # Transpose dimensions to match raster format expectations
+        da = da.transpose('y', 'x')
+
+
+        # Convert to raster dataset
+        # raster = da.rio.write_crs("EPSG:4326").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
+        raster = da.rio.write_crs("EPSG:3857").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
+        raster = raster.rio.reproject("EPSG:4326")  # could make rthis a logic statement and add it as an argument
+
+        # Write to file
+        if isinstance(out_fp, BytesIO):
+            # with out_fp as buffer:
+            raster.astype('float32').rio.to_raster(out_fp, driver='GTiff', compress="LDZ")
+            out_fp.seek(0)
+            main_logger.info(f"\tRaster file saved to {out_fp}")
         else:
-            val = float(col_weight[key][0])
-        weighted_values = df[key].values * val
-        cols_weights[key] = weighted_values
-
-
-    # Define grid for interpolation
-    xmin, ymin, xmax, ymax = gdf.total_bounds
-    res = 100  # Resolution in meters Originally 50 - maybe this could be added to script args?
-    grid_x, grid_y = np.mgrid[xmin:xmax:res, ymax:ymin:-res]
-
-
-    # Perform IDW interpolation with values
-    interpolated_grid = np.zeros_like(grid_x)
-    for key in col_weight:
-        interpolated_grid += interpolate(coords, cols_weights[key], grid_x, grid_y, col_weight[key][1])
-
-    # Find max value and normalize
-    maximum = np.max(interpolated_grid)
-    interpolated_grid = interpolated_grid / maximum
-
-    # Create xarray DataArray
-    da = xr.DataArray(
-        interpolated_grid,
-    dims=["x", "y"],
-        coords={"y": np.arange(ymax, ymin, -res), "x": np.arange(xmin, xmax, res)}
-    )
-
-    # Transpose dimensions to match raster format expectations
-    da = da.transpose('y', 'x')
-
-
-    # Convert to raster dataset
-    # raster = da.rio.write_crs("EPSG:4326").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
-    raster = da.rio.write_crs("EPSG:3857").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
-    raster = raster.rio.reproject("EPSG:4326")  # could make rthis a logic statement and add it as an argument
-
-    # Write to file
-    if isinstance(out_fp, BytesIO):
-        # with out_fp as buffer:
-        raster.astype('float32').rio.to_raster(out_fp, driver='GTiff', compress="LDZ")
-        out_fp.seek(0)
-        print(f"Raster file saved to {out_fp}")
-    else:
-        raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
-        print(f"Raster file saved to {out_fp}.tif")
+            raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
+            main_logger.info(f"Raster file saved to {out_fp}.tif")
+    except Exception as e:
+        main_logger.info(e)
 
 if __name__ == "__main__":
     # Set up command line argument parser
