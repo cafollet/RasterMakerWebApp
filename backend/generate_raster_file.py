@@ -8,7 +8,8 @@ import json
 import math
 import numpy as np
 from shapely.geometry import Point
-from scipy.spatial import KDTree
+# from scipy.spatial import KDTree
+from sklearn.neighbors import KDTree
 from typing import Literal
 from io import BytesIO
 from config import main_logger
@@ -81,15 +82,17 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
     try:
         if type_ == "IDW" or type_ == "Density":
-            tree = KDTree(points, compact_nodes=False, balanced_tree=False)
-            main_logger.info("\t\tcKDTree Created")
+            # tree = KDTree(points, compact_nodes=False, balanced_tree=False)
+            tree = KDTree(points)
+            main_logger.info("\t\tKDTree Created")
 
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
             main_logger.info("\t\tGrid points Created")
 
 
             try:
-                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+                # distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
+                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)))
                 main_logger.info("\t\tDistances/indices Created")
             except Exception as e:
                 main_logger.info(f"THERE WAS A PROBLEM: {e}")
@@ -161,7 +164,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         # Perform IDW interpolation with values
         interpolated_grid = np.zeros_like(grid_x)
         for key in col_weight:
-            main_logger.info(f"Key \"{key}\" loading")
+            main_logger.info(f"\tKey \"{key}\" loading")
             interpolated_grid += interpolate(coords, cols_weights[key], grid_x, grid_y, col_weight[key][1])
 
         # Find max value and normalize
@@ -181,9 +184,8 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
 
 
         # Convert to raster dataset
-        # raster = da.rio.write_crs("EPSG:4326").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
         raster = da.rio.write_crs("EPSG:3857").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
-        raster = raster.rio.reproject("EPSG:4326")  # could make rthis a logic statement and add it as an argument
+        raster = raster.rio.reproject("EPSG:4326")
 
         # Write to file
         if isinstance(out_fp, BytesIO):
@@ -193,7 +195,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
             main_logger.info(f"\tRaster file saved to {out_fp}")
         else:
             raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
-            main_logger.info(f"Raster file saved to {out_fp}.tif")
+            main_logger.info(f"\tRaster file saved to {out_fp}.tif")
     except Exception as e:
         main_logger.info(e)
 
