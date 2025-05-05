@@ -8,7 +8,7 @@ import json
 import math
 import numpy as np
 from shapely.geometry import Point
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree
 from typing import Literal
 from io import BytesIO
 from config import main_logger
@@ -81,7 +81,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
     try:
         if type_ == "IDW" or type_ == "Density":
-            tree = cKDTree(points, compact_nodes=False, balanced_tree=False)
+            tree = KDTree(points, compact_nodes=False, balanced_tree=False)
             main_logger.info("\t\tcKDTree Created")
 
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
