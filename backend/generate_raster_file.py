@@ -94,7 +94,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
                 # distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
                 distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)))
                 main_logger.info("\t\tDistances/indices Created")
-            except Exception as e:
+            except BaseException as e:
                 main_logger.info(f"THERE WAS A PROBLEM: {e}")
 
 
@@ -107,7 +107,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
                 interpolated_values = np.sum(weights * values[indices], axis=1)
         else:
             type_ = type_.lower()
-            main_logger.info("\t\t Type Created")
+            main_logger.info("\t\tType Created")
 
             interpolated_values = scipy.interpolate.griddata(points, values, (grid_x, grid_y), type_, fill_value=0)
 
@@ -138,7 +138,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         # Create GeoDataFrame
         df['geometry'] = points
         gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-        main_logger.info("\t created and stored GeoDF")
+        main_logger.info("\tcreated and stored GeoDF")
         # Extract coordinates and values
         coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
 
@@ -159,7 +159,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         xmin, ymin, xmax, ymax = gdf.total_bounds
         res = 100  # Resolution in meters Originally 50 - maybe this could be added to script args?
         grid_x, grid_y = np.mgrid[xmin:xmax:res, ymax:ymin:-res]
-        main_logger.info("\t created meshgrid")
+        main_logger.info("\tcreated meshgrid")
 
         # Perform IDW interpolation with values
         interpolated_grid = np.zeros_like(grid_x)
