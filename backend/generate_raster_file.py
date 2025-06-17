@@ -64,7 +64,8 @@ def mercator(coord: tuple[float, float] | tuple[float, str], inverse=False) -> t
             elif coord[1] == "y":
                 return y2lat(coord[0], _radius)
 
-def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", "Nearest", "Density"] ="IDW", power=2):
+def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", "Nearest", "Density"] ="IDW", power=2,
+                max_neighbours=50, chunk_size=10000):
     """
     Perform spatial Interpolation.
 
@@ -75,6 +76,8 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
         grid_y: Y-coordinates of grid points
         type_: type of interpolation to apply
         power: Power parameter for IDW (default=2)
+        max_neighbours: Maximum number of neighbours to consider
+        chunk_size: Size of chunks for processing large grids
 
     Returns:
         Interpolated values on the grid
@@ -82,38 +85,45 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
     try:
         if type_ == "IDW" or type_ == "Density":
-            # tree = KDTree(points, compact_nodes=False, balanced_tree=False)
             tree = KDTree(points)
             main_logger.info("\t\tKDTree Created")
 
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
             main_logger.info("\t\tGrid points Created")
 
+            k = min(max_neighbours, len(points))
 
-            try:
-                # distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)), workers=-1)
-                distances, indices = tree.query(grid_points, k=max(len(grid_x), len(grid_y)))
-                main_logger.info("\t\tDistances/indices Created")
-            except BaseException as e:
-                main_logger.info(f"THERE WAS A PROBLEM: {e}")
+            interpolated_values = np.zeros(len(grid_points))
+            for i in range(0, len(grid_points), chunk_size):
+                end_idx = min(i + chunk_size, len(grid_points))
+                chunk_points = grid_points[i:end_idx]
 
+                distances, indices = tree.query(chunk_points, k=k)
+                main_logger.info(f"\t\tProcessed chunk {i//chunk_size + 1}/{(len(grid_points)-1)//chunk_size + 1}")
 
+                if type_ == "IDW":
+                    distances = np.maximum(distances, 1e-10) # Small non-zero distance for div by zero
+                    weights = 1.0 / (distances ** power)
+                    interpolated_chunk = np.sum(weights * values[indices], axis=1) / np.sum(weights, axis=1)
+                else:
+                    distances = np.maximum(distances, 1e-10)
+                    weights = 1.0 / distances
+                    interpolated_chunk = np.sum(weights * values[indices], axis=1)
 
-            if type_ == "IDW":
-                weights = 1.0 / (distances ** power)
-                interpolated_values = np.sum(weights * values[indices], axis=1) / np.sum(weights, axis=1)
-            else:
-                weights = 1.0 / distances
-                interpolated_values = np.sum(weights * values[indices], axis=1)
+                interpolated_values[i:end_idx] = interpolated_chunk
+
         else:
             type_ = type_.lower()
-            main_logger.info("\t\tType Created")
+            main_logger.info("\t\tUsing scipy griddata")
 
             interpolated_values = scipy.interpolate.griddata(points, values, (grid_x, grid_y), type_, fill_value=0)
 
+            ####### REMOVE BELOW THING IF STILL DOESNT WORK #######
+            interpolated_values = interpolated_values.ravel()
+
         return interpolated_values.reshape(grid_x.shape)
     except Exception as e:
-        main_logger.info(e)
+        main_logger.info(f"Interpolation error: {e}")
         return None
 
 
