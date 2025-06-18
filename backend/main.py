@@ -42,7 +42,8 @@ def get_layers():
 def upload_file():
     try:
         file = request.files['file']
-        return jsonify({"columns": provide_columns(BytesIO(file.read()))})
+        columns = provide_columns(file.stream)
+        return jsonify({"columns": columns})
 
     except Exception as e:
         print("ERROR:", e, "END ERROR")
@@ -125,15 +126,18 @@ def create_layer():
 
     outstream_3 = BytesIO()
 
-    main_logger.info("Succesfully Initialized Buffer streams")
+    main_logger.info("Successfully Initialized Buffer streams")
 
     try:
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
-        main_logger.info("Raster File Generated")
-        write_pix_json(outstream_1, outstream_2)
-        main_logger.info("Json File Generated")
-        convert_to_alpha(outstream_1, out_fp=outstream_3)
-        main_logger.info("Successfully Converted Image to LA")
+        # Get values and release memory
+        outstream_1_value = outstream_1.getvalue()
+
+        write_pix_json(BytesIO(outstream_1_value), outstream_2)
+
+        convert_to_alpha(BytesIO(outstream_1_value), out_fp=outstream_3)
+        outstream_1 = None  # Help garbage collector
+
     except Exception as e:
         main_logger.info(e)
 
@@ -155,6 +159,8 @@ def create_layer():
         instream.getvalue(),
         outstream_3.getvalue(),
         outstream_2.getvalue())
+
+    instream.close()  # Release memory
     print("TEST", new_layer, "END TEST")
 
     try:

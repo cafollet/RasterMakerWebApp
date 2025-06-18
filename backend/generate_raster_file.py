@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import numpy as np
+import gc
 from shapely.geometry import Point
 # from scipy.spatial import KDTree
 from sklearn.neighbors import KDTree
@@ -112,6 +113,10 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
                 interpolated_values[i:end_idx] = interpolated_chunk
 
+                del distances, indices, chunk_points
+                if i % (5 * chunk_size) == 0:
+                    gc.collect()  # Force garbage collection periodically
+
         else:
             type_ = type_.lower()
             main_logger.info("\t\tUsing scipy griddata")
@@ -167,15 +172,38 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
 
         # Define grid for interpolation
         xmin, ymin, xmax, ymax = gdf.total_bounds
-        res = 100  # Resolution in meters Originally 50 - maybe this could be added to script args?
-        grid_x, grid_y = np.mgrid[xmin:xmax:res, ymax:ymin:-res]
-        main_logger.info("\tcreated meshgrid")
 
-        # Perform IDW interpolation with values
-        interpolated_grid = np.zeros_like(grid_x)
-        for key in col_weight:
-            main_logger.info(f"\tKey \"{key}\" loading")
-            interpolated_grid += interpolate(coords, cols_weights[key], grid_x, grid_y, col_weight[key][1])
+        # Calculate area and adjust resolution dynamically
+        area = (xmax - xmin) * (ymax - ymin)
+        # Adjust resolution based on area size
+        if area > 1e10:  # Very large area
+            res = 500
+        elif area > 1e9:
+            res = 250
+        else:
+            res = 100
+
+        # Process in chunks to reduce memory usage
+        chunk_size = 1000  # Adjust based on your system's memory
+        x_chunks = np.array_split(np.arange(xmin, xmax, res), (xmax - xmin) // (res * chunk_size) + 1)
+
+        interpolated_grid_full = []
+
+        for x_chunk in x_chunks:
+            x_start, x_end = x_chunk[0], x_chunk[-1] + res
+            grid_x_chunk, grid_y_chunk = np.mgrid[x_start:x_end:res, ymax:ymin:-res]
+
+            # Perform interpolation on this chunk
+            interpolated_chunk = np.zeros_like(grid_x_chunk)
+            for key in col_weight:
+                interpolated_chunk += interpolate(coords, cols_weights[key], grid_x_chunk, grid_y_chunk,
+                                                  col_weight[key][1])
+
+            interpolated_grid_full.append(interpolated_chunk)
+
+        # Combine chunks
+        interpolated_grid = np.hstack(interpolated_grid_full)
+
 
         # Find max value and normalize
         maximum = np.max(interpolated_grid)
