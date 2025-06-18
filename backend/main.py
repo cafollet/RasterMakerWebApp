@@ -1,6 +1,9 @@
 import json
 import base64
 import logging
+import signal
+import sys
+import gc
 from waitress import serve
 from flask import request, jsonify
 from config import app, db, main_logger
@@ -9,8 +12,7 @@ from io import BytesIO, StringIO
 from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
-import signal
-import sys
+
 
 
 # endpoint removed
@@ -82,17 +84,27 @@ def get_raster(layer_id):
     return jsonify({"layerImage": image_response_data, "layerJson": json.load(StringIO(json_index))})
 
 
-@app.route("/get_json/<int:layer_id>", methods=["GET"])
-def get_json(layer_id):
+@app.route("/get_json/<int:layer_id>/<string:coord>", methods=["GET"])
+def get_json(layer_id, coord):
     layer = db.session.get(RasterLayer, layer_id)
 
     if not layer:
         return jsonify({"message": "Layer not found"}), 404
 
     json_index = StringIO(layer.out_json_data)
+    if coord == "None":
+        find_these_items = ["tbound", "bbound", "lbound", "rbound", "sizex", "sizey"]
+    else:
+        find_these_items = [coord]
+
     json_index = json.loads(json_index.getvalue())
 
-    return jsonify({"jsonFile": json_index})
+    new_json = {}
+    for item in find_these_items:
+        new_json[item] = json_index[item]
+
+    del json_index, find_these_items
+    return jsonify({"jsonFile": new_json})
 
 
 @app.route("/create_layer", methods=["POST"])
@@ -176,7 +188,7 @@ def create_layer():
 
 @app.route("/update_layer/<int:layer_id>", methods=["PATCH"])
 def update_layer(layer_id):
-    layer = RasterLayer.query.get(layer_id)
+    layer = db.session.get(RasterLayer, layer_id)
 
     if not layer:
         return jsonify({"message": "Layer not found"}), 404
