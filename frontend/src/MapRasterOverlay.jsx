@@ -42,12 +42,15 @@ map.on('click', async function (e) {
     let indexValues = ""
 
     for (let singleLayer in allLayers) {
-        let indivResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}`)
+        let genResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}/None`)
+        let genData = await genResponse.json()
+        const singleCoord = findCoord(e, genData.jsonFile, map, allLayers[singleLayer].title)
+        let indivResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}/${singleCoord}`)
         let indivData = await indivResponse.json()
 
         console.log(indivData)
 
-        const indexValue = findIndex(e, indivData.jsonFile, map, allLayers[singleLayer].title);
+        const indexValue = findIndex(indivData.jsonFile, singleCoord);
         indexValues += (singleLayer === 0) ? `${allLayers[singleLayer].title} Index: ${indexValue}` : `\n${allLayers[singleLayer].title} Index: ${indexValue}`
     }
     L.popup(e.latlng, {content: indexValues})
@@ -62,7 +65,25 @@ map.on('click', async function (e) {
      */
 })
 
-function findIndex(pos, layer, map, title) {
+function findIndex(layer, coordinate) {
+    console.log("ALLOVERLAYS", allOverlays);
+
+    if (coordinate !== undefined) {
+
+        // Calculate nearest pixel coordinate
+        const pixelVal = Math.round(1000
+            * layer[coordinate]["name"]) / 1000
+
+        // logging pixel coord for debugging
+        console.log(pixelVal)
+
+        return (pixelVal)
+
+
+    }
+}
+
+function findCoord(pos, layer, map, title) {
     console.log("ALLOVERLAYS", allOverlays);
     const centre = allOverlays[title].getCenter(); // Center in lat/lng map coords
 
@@ -98,8 +119,7 @@ function findIndex(pos, layer, map, title) {
         const mouseToOriginV = (layer["sizey"] / 2) - mouseToCentreV;  // Opposite direction for y-axis
 
         // Calculate nearest pixel coordinate
-        const pixelCoord = Math.round(1000
-            * layer[ Math.floor(mouseToOriginH).toString() + "," + Math.floor(mouseToOriginV).toString() ]["name"]) / 1000
+        const pixelCoord = Math.floor(mouseToOriginH).toString() + "," + Math.floor(mouseToOriginV).toString()
 
         // logging pixel coord for debugging
         console.log(pixelCoord)
