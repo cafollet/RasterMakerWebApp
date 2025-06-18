@@ -11,6 +11,7 @@ from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
 import signal
 import sys
+import gc
 
 
 # endpoint removed
@@ -129,6 +130,7 @@ def create_layer():
 
     try:
         generate_raster_file(instream, outstream_1, col_weights, [geom_y, geom_x])
+
         main_logger.info("Raster File Generated")
         write_pix_json(outstream_1, outstream_2)
         main_logger.info("Json File Generated")
@@ -163,6 +165,13 @@ def create_layer():
     except Exception as e:
         print("ERROR:", e, "END ERROR")
         return jsonify({"message": str(e)}), 400
+    finally:
+        # Ensure cleanup happens
+        if 'instream' in locals():
+            instream.close()
+        if 'outstream_1' in locals():
+            outstream_1.close()
+        gc.collect()
 
     return jsonify({"message": "Layer Created!"}), 201
 

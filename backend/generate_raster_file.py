@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import numpy as np
+import gc
 from shapely.geometry import Point
 # from scipy.spatial import KDTree
 from sklearn.neighbors import KDTree
@@ -86,42 +87,41 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
     try:
         if type_ == "IDW" or type_ == "Density":
             tree = KDTree(points)
-            main_logger.info("\t\tKDTree Created")
 
+            # Process in smaller chunks and free memory immediately
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
-            main_logger.info("\t\tGrid points Created")
-
             k = min(max_neighbours, len(points))
 
-            interpolated_values = np.zeros(len(grid_points))
+            interpolated_values = np.zeros(len(grid_points), dtype=np.float32)  # Use float32
+
             for i in range(0, len(grid_points), chunk_size):
                 end_idx = min(i + chunk_size, len(grid_points))
                 chunk_points = grid_points[i:end_idx]
 
                 distances, indices = tree.query(chunk_points, k=k)
-                main_logger.info(f"\t\tProcessed chunk {i//chunk_size + 1}/{(len(grid_points)-1)//chunk_size + 1}")
 
+                # Process and immediately store results
                 if type_ == "IDW":
-                    distances = np.maximum(distances, 1e-10) # Small non-zero distance for div by zero
+                    distances = np.maximum(distances, 1e-10)
                     weights = 1.0 / (distances ** power)
-                    interpolated_chunk = np.sum(weights * values[indices], axis=1) / np.sum(weights, axis=1)
+                    interpolated_values[i:end_idx] = np.sum(
+                        weights * values[indices], axis=1
+                    ) / np.sum(weights, axis=1)
                 else:
                     distances = np.maximum(distances, 1e-10)
                     weights = 1.0 / distances
-                    interpolated_chunk = np.sum(weights * values[indices], axis=1)
+                    interpolated_values[i:end_idx] = np.sum(
+                        weights * values[indices], axis=1
+                    )
 
-                interpolated_values[i:end_idx] = interpolated_chunk
+                # Free chunk memory
+                del distances, indices, weights, chunk_points
 
-        else:
-            type_ = type_.lower()
-            main_logger.info("\t\tUsing scipy griddata")
-
-            interpolated_values = scipy.interpolate.griddata(points, values, (grid_x, grid_y), type_, fill_value=0)
-
-            ####### REMOVE BELOW THING IF STILL DOESNT WORK #######
-            interpolated_values = interpolated_values.ravel()
+            del tree, grid_points  # Explicitly delete tree
+            gc.collect()
 
         return interpolated_values.reshape(grid_x.shape)
+
     except Exception as e:
         main_logger.info(f"Interpolation error: {e}")
         return None
@@ -131,23 +131,24 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 def generate_raster_file(in_fp, out_fp, col_weight, geom):
     try:
         main_logger.info("generate_raster_file Started")
+
         # Load and clean up data
         data = pd.read_csv(in_fp)
-        points = []
-        df = data.drop(data[data[geom[1]] == 0.0].index)
-        df = df.drop(df[df[geom[0]] == 0.0].index)
+
+        data = data[(data[geom[1]] != 0.0) & (data[geom[0]] != 0.0)]
 
         if "Count" in col_weight.keys():
-            df["Count"] = [1 for _ in range(df[list(df.columns)[0]].size)]
+            data["Count"] = 1
 
         # Convert geographic coordinates to Mercator points
-        for i, row in df.iterrows():
+        points = []
+        for i, row in data.iterrows():
             point = Point(mercator((row[geom[1]], row[geom[0]])))
             points.append(point)
 
         # Create GeoDataFrame
-        df['geometry'] = points
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+        data['geometry'] = points
+        gdf = gpd.GeoDataFrame(data, geometry="geometry", crs="EPSG:4326")
         main_logger.info("\tcreated and stored GeoDF")
         # Extract coordinates and values
         coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
@@ -161,7 +162,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
                 val = col_weight[key][0]
             else:
                 val = float(col_weight[key][0])
-            weighted_values = df[key].values * val
+            weighted_values = data[key].values * val
             cols_weights[key] = weighted_values
 
 
@@ -206,8 +207,19 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         else:
             raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
             main_logger.info(f"\tRaster file saved to {out_fp}.tif")
+
+        del data, gdf, coords, interpolated_grid, da, raster
+        del grid_x, grid_y
+        if 'tree' in locals():
+            del tree
+
+        # Force garbage collection
+        gc.collect()
+
     except Exception as e:
         main_logger.info(e)
+    finally:
+        gc.collect()
 
 if __name__ == "__main__":
     # Set up command line argument parser

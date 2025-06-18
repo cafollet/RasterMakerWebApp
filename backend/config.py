@@ -4,6 +4,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_migrate import Migrate
 import logging
+import numpy as np
+import pandas as pd
+
+# Limit memory usage
+np.seterr(all='raise')  # Raise errors instead of warnings
+pd.options.mode.copy_on_write = True  # Reduce memory copies
 
 
 app = Flask(__name__)
