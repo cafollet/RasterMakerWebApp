@@ -9,7 +9,6 @@ import math
 import numpy as np
 import gc
 from shapely.geometry import Point
-# from scipy.spatial import KDTree
 from sklearn.neighbors import KDTree
 from typing import Literal
 from io import BytesIO

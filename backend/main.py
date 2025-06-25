@@ -13,28 +13,20 @@ from generate_raster_file import generate_raster_file
 from getImage import write_pix_json, convert_to_alpha
 from provide_columns import provide_columns
 
-
-
-# endpoint removed
-"""@app.route('/update_backend', methods=['POST'])
-def webhook():
-    if request.method == 'POST':
-        repo = git.Repo(
-            'https://github.com/cafollet/RasterMakerWebApp'
-            )
-        origin = repo.remotes.origin
-        origin.pull()
-        return 'Updated PythonAnywhere successfully', 200
-    else:
-        return 'Wrong event type', 400"""
-
 def handle_sigterm(signum, frame):
+    """Handles a sigterm, if thrown by the interpreter"""
     main_logger.info(f"Received signal {signum}. Exiting gracefully...")
     sys.exit(0)
 
 
 @app.route("/layers", methods=["GET"])
 def get_layers():
+    """
+    Retrieves all stored raster layers.
+
+    Returns:
+            JSON: A list of all layer objects in the database.
+    """
     layers = RasterLayer.query.all()
     json_layers = list(map(lambda x: x.to_json(), layers))
     return jsonify({"layers": json_layers})
@@ -42,6 +34,11 @@ def get_layers():
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
+    """
+    Retrieves a csv file, and provides all numerical columns for that file
+    Returns:
+            JSON: A list of all numerical columns found.
+    """
     try:
         file = request.files['file']
         columns = provide_columns(file.stream)
@@ -53,7 +50,14 @@ def upload_file():
 
 
 @app.route("/get_columns/<int:layer_id>", methods=["GET"])
-def get_columns(layer_id):
+def get_columns(layer_id: int):
+    """
+    Retrieve all of the columns in data set that have numerical values
+    Query Parameters:
+            layer_id (int): unique id for the database layer to retrieve columns from
+    Returns:
+            JSON: A list of all numerical columns found.
+    """
     layer = db.session.get(RasterLayer, layer_id)
     if not layer:
         return jsonify({"message": "Layer not found"}), 404
@@ -65,6 +69,14 @@ def get_columns(layer_id):
 
 @app.route("/get_raster/<int:layer_id>", methods=["GET"])
 def get_raster(layer_id):
+    """
+    Retrieve the raster image from a layer
+    Query Parameters:
+            layer_id (int): unique id for the database layer to retrieve the raster from
+    Returns:
+            JSON: A dictionary containing the Image data in base64, and the json data
+            describing the dimensions and pixel values
+    """
     layer = db.session.get(RasterLayer, layer_id)
 
     if not layer:
@@ -86,6 +98,15 @@ def get_raster(layer_id):
 
 @app.route("/get_json/<int:layer_id>/<string:coord>", methods=["GET"])
 def get_json(layer_id, coord):
+    """
+    Retrieve a pixel value in data set, as well as the dimensions of the layer image
+    Query Parameters:
+            layer_id (int): unique id for the database layer
+            coord (str): the coodinate of the pixel to query
+    Returns:
+            JSON: An object describing the top, bottom, left, and right bounds of the layer,
+            as well as the size, and specific pixel value.
+    """
     layer = db.session.get(RasterLayer, layer_id)
 
     if not layer:
@@ -109,6 +130,12 @@ def get_json(layer_id, coord):
 
 @app.route("/create_layer", methods=["POST"])
 def create_layer():
+    """
+    Create a layer and store in database
+
+    Returns:
+            JSON: A success message
+    """
     main_logger.info("Creating Layer")
     file = request.files["file"]
     title = request.form.get("title")
@@ -188,6 +215,13 @@ def create_layer():
 
 @app.route("/update_layer/<int:layer_id>", methods=["PATCH"])
 def update_layer(layer_id):
+    """
+    Updates a layer currently in the database
+    Query Parameters:
+            layer_id (int): unique id for the database layer
+    Returns:
+            JSON: A success message
+    """
     layer = db.session.get(RasterLayer, layer_id)
 
     if not layer:
@@ -218,8 +252,8 @@ def update_layer(layer_id):
     else:
         instream = BytesIO(layer.in_csv_data)
 
-    print(json.loads(layer.col_weights), col_weights)
-    if (layer.filename != filename) or (json.loads(layer.col_weights) != col_weights) or (layer.geom_x != geom_x) or (layer.geom_y != geom_y):
+    if ((layer.filename != filename) or (json.loads(layer.col_weights) != col_weights)
+            or (layer.geom_x != geom_x) or (layer.geom_y != geom_y)):
 
         outstream_1 = BytesIO()
 
@@ -251,6 +285,13 @@ def update_layer(layer_id):
 
 @app.route("/delete_layer/<int:layer_id>", methods=["DELETE"])
 def delete_layer(layer_id):
+    """
+        Deletes a layer from the database
+        Query Parameters:
+                layer_id (int): unique id for the database layer to delete
+        Returns:
+                JSON: A success message
+        """
     layer = RasterLayer.query.get(layer_id)
 
     if not layer:
