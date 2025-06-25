@@ -45,7 +45,7 @@ def upload_file():
         return jsonify({"columns": columns})
 
     except Exception as e:
-        print("ERROR:", e, "END ERROR")
+        main_logger.error(e)
         return jsonify({"message": str(e)}), 400
 
 
