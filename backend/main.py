@@ -102,7 +102,7 @@ def get_json(layer_id, coord):
     Retrieve a pixel value in data set, as well as the dimensions of the layer image
     Query Parameters:
             layer_id (int): unique id for the database layer
-            coord (str): the coodinate of the pixel to query
+            coord (str): the coordinate of the pixel to query
     Returns:
             JSON: An object describing the top, bottom, left, and right bounds of the layer,
             as well as the size, and specific pixel value.

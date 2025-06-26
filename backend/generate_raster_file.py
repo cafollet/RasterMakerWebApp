@@ -133,108 +133,123 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
 
 def generate_raster_file(in_fp, out_fp, col_weight, geom):
+    main_logger.info("generate_raster_file Started")
+
+    # Load data
     try:
-        main_logger.info("generate_raster_file Started")
-        # Load and clean up data
-        data = pd.read_csv(in_fp)
-        points = []
-        df = data.drop(data[data[geom[1]] == 0.0].index)
-        df = df.drop(df[df[geom[0]] == 0.0].index)
+        data = pd.read_csv(in_fp, sep=r"[\t,]", engine='python')
+    except UnicodeError as e:
+        main_logger.info('%s, Resolving...', e, exc_info=e)
+        in_fp.seek(0)
+        try:
+            data = pd.read_csv(in_fp, encoding='utf-16',
+                               sep=r"[\t,]", engine='python')
+        except Exception as e:
+            main_logger.error("%s, Must fix manually.", e, exc_info=e)
+    finally:
+        try:
+            points = []
 
-        if "Count" in col_weight.keys():
-            df["Count"] = [1 for _ in range(df[list(df.columns)[0]].size)]
+            # Clean up data
+            df = data[data[geom[0]].notnull()]
+            df = df[df[geom[1]].notnull()]
+            df = df.drop(df[df[geom[1]] == 0.0].index)
+            df = df.drop(df[df[geom[0]] == 0.0].index)
 
-        # Convert geographic coordinates to Mercator points
-        for i, row in df.iterrows():
-            point = Point(mercator((row[geom[1]], row[geom[0]])))
-            points.append(point)
+            if "Count" in col_weight.keys():
+                df["Count"] = [1 for _ in range(df[list(df.columns)[0]].size)]
 
-        # Create GeoDataFrame
-        df['geometry'] = points
-        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-        main_logger.info("\tcreated and stored GeoDF")
-        # Extract coordinates and values
-        coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
+            # Convert geographic coordinates to Mercator points
+            for i, row in df.iterrows():
+                point = Point(mercator((row[geom[1]], row[geom[0]])))
+                points.append(point)
 
-        # Compute weighted values
-        cols_weights = {}
-        for key in col_weight:
+            # Create GeoDataFrame
+            df['geometry'] = points
+            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+            main_logger.info("\tcreated and stored GeoDF")
+            # Extract coordinates and values
+            coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
 
-            keys = list(col_weight.keys())
-            if isinstance(col_weight[key][0], float):
-                val = col_weight[key][0]
-            else:
-                val = float(col_weight[key][0])
-            weighted_values = df[key].values * val
-            cols_weights[key] = weighted_values
-
-
-        # Define grid for interpolation
-        xmin, ymin, xmax, ymax = gdf.total_bounds
-
-        # Calculate area and adjust resolution dynamically
-        area = (xmax - xmin) * (ymax - ymin)
-        # Adjust resolution based on area size
-        if area > 1e10:  # Very large area
-            res = 500
-        elif area > 1e9:
-            res = 250
-        else:
-            res = 100
-
-        # Process in chunks to reduce memory usage
-        chunk_size = 1000  # Adjust based on your system's memory
-        x_chunks = np.array_split(np.arange(xmin, xmax, res), (xmax - xmin) // (res * chunk_size) + 1)
-
-        interpolated_grid_full = []
-
-        for x_chunk in x_chunks:
-            x_start, x_end = x_chunk[0], x_chunk[-1] + res
-            grid_x_chunk, grid_y_chunk = np.mgrid[x_start:x_end:res, ymax:ymin:-res]
-
-            # Perform interpolation on this chunk
-            interpolated_chunk = np.zeros_like(grid_x_chunk)
+            # Compute weighted values
+            cols_weights = {}
             for key in col_weight:
-                interpolated_chunk += interpolate(coords, cols_weights[key], grid_x_chunk, grid_y_chunk,
-                                                  col_weight[key][1])
 
-            interpolated_grid_full.append(interpolated_chunk)
-
-        # Combine chunks
-        interpolated_grid = np.hstack(interpolated_grid_full)
-
-
-        # Find max value and normalize
-        maximum = np.max(interpolated_grid)
-        interpolated_grid = interpolated_grid / maximum
-
-        # Create xarray DataArray
-        da = xr.DataArray(
-            interpolated_grid,
-        dims=["x", "y"],
-            coords={"y": np.arange(ymax, ymin, -res), "x": np.arange(xmin, xmax, res)}
-        )
-        main_logger.info("\t created dataarray")
-
-        # Transpose dimensions to match raster format expectations
-        da = da.transpose('y', 'x')
+                keys = list(col_weight.keys())
+                if isinstance(col_weight[key][0], float):
+                    val = col_weight[key][0]
+                else:
+                    val = float(col_weight[key][0])
+                weighted_values = df[key].values * val
+                cols_weights[key] = weighted_values
 
 
-        # Convert to raster dataset
-        raster = da.rio.write_crs("EPSG:3857").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
-        raster = raster.rio.reproject("EPSG:4326")
+            # Define grid for interpolation
+            xmin, ymin, xmax, ymax = gdf.total_bounds
 
-        # Write to file
-        if isinstance(out_fp, BytesIO):
-            # with out_fp as buffer:
-            raster.astype('float32').rio.to_raster(out_fp, driver='GTiff', compress="LDZ")
-            out_fp.seek(0)
-            main_logger.info(f"\tRaster file saved to {out_fp}")
-        else:
-            raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
-            main_logger.info(f"\tRaster file saved to {out_fp}.tif")
-    except Exception as e:
-        main_logger.info(e)
+            # Calculate area and adjust resolution dynamically
+            area = (xmax - xmin) * (ymax - ymin)
+            # Adjust resolution based on area size
+            if area > 1e10:  # Very large area
+                res = 500
+            elif area > 1e9:
+                res = 250
+            else:
+                res = 100
+
+            # Process in chunks to reduce memory usage
+            chunk_size = 1000  # Adjust based on your system's memory
+            x_chunks = np.array_split(np.arange(xmin, xmax, res), (xmax - xmin) // (res * chunk_size) + 1)
+
+            interpolated_grid_full = []
+
+            for x_chunk in x_chunks:
+                x_start, x_end = x_chunk[0], x_chunk[-1] + res
+                grid_x_chunk, grid_y_chunk = np.mgrid[x_start:x_end:res, ymax:ymin:-res]
+
+                # Perform interpolation on this chunk
+                interpolated_chunk = np.zeros_like(grid_x_chunk)
+                for key in col_weight:
+                    interpolated_chunk += interpolate(coords, cols_weights[key], grid_x_chunk, grid_y_chunk,
+                                                      col_weight[key][1])
+
+                interpolated_grid_full.append(interpolated_chunk)
+
+            # Combine chunks
+            interpolated_grid = np.hstack(interpolated_grid_full)
+
+
+            # Find max value and normalize
+            maximum = np.max(interpolated_grid)
+            interpolated_grid = interpolated_grid / maximum
+
+            # Create xarray DataArray
+            da = xr.DataArray(
+                interpolated_grid,
+            dims=["x", "y"],
+                coords={"y": np.arange(ymax, ymin, -res), "x": np.arange(xmin, xmax, res)}
+            )
+            main_logger.info("\t created dataarray")
+
+            # Transpose dimensions to match raster format expectations
+            da = da.transpose('y', 'x')
+
+
+            # Convert to raster dataset
+            raster = da.rio.write_crs("EPSG:3857").rio.set_spatial_dims(x_dim="x", y_dim="y", inplace=True)
+            raster = raster.rio.reproject("EPSG:4326")
+
+            # Write to file
+            if isinstance(out_fp, BytesIO):
+                # with out_fp as buffer:
+                raster.astype('float32').rio.to_raster(out_fp, driver='GTiff', compress="LDZ")
+                out_fp.seek(0)
+                main_logger.info(f"\tRaster file saved to {out_fp}")
+            else:
+                raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
+                main_logger.info(f"\tRaster file saved to {out_fp}.tif")
+        except Exception as e:
+            main_logger.error("%s, must fix in code", e, exc_info=e)
 
 if __name__ == "__main__":
     # Set up command line argument parser
