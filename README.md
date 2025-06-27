@@ -4,6 +4,8 @@ Web App to create and view raster data from Point-Based csv data
 
 ## How to run locally
 
+*Warning: Local running requires some sql db. For small data testing, install and use sqlite*
+
 In one shell window, run the backend:
 
 python/pip 1-2
