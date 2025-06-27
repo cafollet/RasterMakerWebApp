@@ -8,14 +8,14 @@ Web App to create and view raster data from Point-Based csv data
 
 1. In one shell window, run the backend:
 
-###python/pip 1-2
+**python/pip 1-2**
 ```shell
 cd backend
 pip install -r requirements.txt
 python main.py
 ```
 
-###python/pip 3
+**python/pip 3**
 ```shell
 cd backend
 pip3 install -r requirements.txt
