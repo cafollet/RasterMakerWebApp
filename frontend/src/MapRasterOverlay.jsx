@@ -45,24 +45,30 @@ map.on('click', async function (e) {
         let genResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}/None`)
         let genData = await genResponse.json()
         const singleCoord = findCoord(e, genData.jsonFile, map, allLayers[singleLayer].title)
-        let indivResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}/${singleCoord}`)
-        let indivData = await indivResponse.json()
+        if (singleCoord !== undefined) {
+            let indivResponse = await fetch(`${apiEndpoint}/get_json/${allLayers[singleLayer].id}/${singleCoord}`)
+            let indivData = await indivResponse.json()
+
 
         console.log(indivData)
 
         const indexValue = findIndex(indivData.jsonFile, singleCoord);
         indexValues += (singleLayer === 0) ? `${allLayers[singleLayer].title} Index: ${indexValue}` : `\n${allLayers[singleLayer].title} Index: ${indexValue}`
+        }
     }
-    L.popup(e.latlng, {content: indexValues})
-        .openOn(map);
+    if (indexValues !== "") {
+        L.popup(e.latlng, {content: indexValues})
+            .openOn(map);
 
-    // Create marker to show info [Replaced with above]
-    /*
-    L.marker(e.latlng).addTo(map)
-        .bindPopup(indexValues)
-        .openPopup();
+        // Create marker to show info [Replaced with above]
+        /*
+        L.marker(e.latlng).addTo(map)
+            .bindPopup(indexValues)
+            .openPopup();
 
-     */
+         */
+    }
+
 })
 
 function findIndex(layer, coordinate) {
