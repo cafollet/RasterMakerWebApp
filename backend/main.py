@@ -3,15 +3,14 @@ import base64
 import logging
 import signal
 import sys
-import gc
 from waitress import serve
 from flask import request, jsonify
 from config import app, db, main_logger
 from models import RasterLayer
 from io import BytesIO, StringIO
-from generate_raster_file import generate_raster_file
-from getImage import write_pix_json, convert_to_alpha
-from provide_columns import provide_columns
+from backend.data_manipulation.generate_raster_file import generate_raster_file
+from backend.data_manipulation.getImage import write_pix_json, convert_to_alpha
+from backend.data_manipulation.provide_columns import provide_columns
 
 def handle_sigterm(signum, frame):
     """Handles a sigterm, if thrown by the interpreter"""
