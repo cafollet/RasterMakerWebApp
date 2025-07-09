@@ -13,7 +13,8 @@ from shapely.geometry import Point
 from sklearn.neighbors import KDTree
 from typing import Literal
 from io import BytesIO
-from config import main_logger
+# from config import main_logger
+## Need to figure out how to incorporate logging again
 
 
 def y2lat(y, R):
@@ -87,10 +88,10 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
     try:
         if type_ == "IDW" or type_ == "Density":
             tree = KDTree(points)
-            main_logger.info("\t\tKDTree Created")
+            # main_logger.info("\t\tKDTree Created")
 
             grid_points = np.column_stack((grid_x.ravel(), grid_y.ravel()))
-            main_logger.info("\t\tGrid points Created")
+            # main_logger.info("\t\tGrid points Created")
 
             k = min(max_neighbours, len(points))
 
@@ -100,7 +101,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
                 chunk_points = grid_points[i:end_idx]
 
                 distances, indices = tree.query(chunk_points, k=k)
-                main_logger.info(f"\t\tProcessed chunk {i//chunk_size + 1}/{(len(grid_points)-1)//chunk_size + 1}")
+                # main_logger.info(f"\t\tProcessed chunk {i//chunk_size + 1}/{(len(grid_points)-1)//chunk_size + 1}")
 
                 if type_ == "IDW":
                     distances = np.maximum(distances, 1e-10) # Small non-zero distance for div by zero
@@ -119,7 +120,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
         else:
             type_ = type_.lower()
-            main_logger.info("\t\tUsing scipy griddata")
+            # main_logger.info("\t\tUsing scipy griddata")
 
             interpolated_values = scipy.interpolate.griddata(points, values, (grid_x, grid_y), type_, fill_value=0)
 
@@ -128,7 +129,7 @@ def interpolate(points, values, grid_x, grid_y, type_: Literal["Linear", "IDW", 
 
         return interpolated_values.reshape(grid_x.shape)
     except Exception as e:
-        main_logger.info(f"Interpolation error: {e}")
+        # main_logger.info(f"Interpolation error: {e}")
         return None
 
 
@@ -167,11 +168,11 @@ def detect_delimiter(file_obj, num_bytes=4096):
 
 
 def generate_raster_file(in_fp, out_fp, col_weight, geom):
-    main_logger.info("generate_raster_file Started")
+    # main_logger.info("generate_raster_file Started")
 
     # Detect delimiter
     delimiter = detect_delimiter(in_fp)
-    main_logger.info(f"Detected delimiter: {repr(delimiter)}")
+    # main_logger.info(f"Detected delimiter: {repr(delimiter)}")
 
     # Load data
     encodings = ['utf-8', 'utf-16', 'utf-16-be', 'utf-16-le', 'latin-1', 'iso-8859-1']
@@ -181,12 +182,12 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         try:
             in_fp.seek(0)
             data = pd.read_csv(in_fp, sep=delimiter, encoding=encoding, engine='python')
-            main_logger.info(f"Successfully read CSV with encoding: {encoding}")
+            # main_logger.info(f"Successfully read CSV with encoding: {encoding}")
             break
         except (UnicodeError, UnicodeDecodeError):
             continue
         except Exception as e:
-            main_logger.debug(f"Failed with encoding {encoding}: {e}")
+            # main_logger.debug(f"Failed with encoding {encoding}: {e}")
             continue
 
     if data is None:
@@ -212,7 +213,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         # Create GeoDataFrame
         df['geometry'] = points
         gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-        main_logger.info("\tcreated and stored GeoDF")
+        # main_logger.info("\tcreated and stored GeoDF")
         # Extract coordinates and values
         coords = np.column_stack((gdf.geometry.x, gdf.geometry.y))
 
@@ -274,7 +275,7 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
         dims=["x", "y"],
             coords={"y": np.arange(ymax, ymin, -res), "x": np.arange(xmin, xmax, res)}
         )
-        main_logger.info("\t created dataarray")
+        # main_logger.info("\t created dataarray")
 
         # Transpose dimensions to match raster format expectations
         da = da.transpose('y', 'x')
@@ -289,12 +290,13 @@ def generate_raster_file(in_fp, out_fp, col_weight, geom):
             # with out_fp as buffer:
             raster.astype('float32').rio.to_raster(out_fp, driver='GTiff', compress="LDZ")
             out_fp.seek(0)
-            main_logger.info(f"\tRaster file saved to {out_fp}")
+            # main_logger.info(f"\tRaster file saved to {out_fp}")
         else:
             raster.astype('float32').rio.to_raster(f"{out_fp}", driver='GTiff', compress="LDZ")
-            main_logger.info(f"\tRaster file saved to {out_fp}.tif")
+            # main_logger.info(f"\tRaster file saved to {out_fp}.tif")
     except Exception as e:
-        main_logger.error("%s, must fix in code", e, exc_info=e)
+        return e
+        # main_logger.error("%s, must fix in code", e, exc_info=e)
 
 if __name__ == "__main__":
     # Set up command line argument parser

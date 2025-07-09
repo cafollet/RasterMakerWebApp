@@ -8,9 +8,9 @@ from flask import request, jsonify
 from config import app, db, main_logger
 from models import RasterLayer
 from io import BytesIO, StringIO
-from backend.data_manipulation.generate_raster_file import generate_raster_file
-from backend.data_manipulation.getImage import write_pix_json, convert_to_alpha
-from backend.data_manipulation.provide_columns import provide_columns
+from data_manipulation.generate_raster_file import generate_raster_file
+from data_manipulation.getImage import write_pix_json, convert_to_alpha
+from data_manipulation.provide_columns import provide_columns
 
 def handle_sigterm(signum, frame):
     """Handles a sigterm, if thrown by the interpreter"""
