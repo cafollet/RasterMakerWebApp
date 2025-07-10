@@ -11,7 +11,7 @@ console.log(apiEndpoint);
 
 function removeValue(value, index, arr, valToRemove) {
     if (value !== valToRemove) {
-        arr.splice(index, 1)
+        //arr.splice(index, 1)
         return true
     }
     else {
@@ -39,7 +39,6 @@ function App() {
         let leftoverLayers = [...layersInMap];
         for (let layer of data.layers) {
             let layerId = layer.id;
-            console.log(layer);
 
             let indivResponse = await fetch(`${apiEndpoint}/get_raster/${layerId}`);
             let indivData = await indivResponse.json();
@@ -54,13 +53,14 @@ function App() {
             if (!(layersInMap.includes(layer.title))) {
                 imageLayers[layer.title] = createLayer(image, imageJson, currentMap, layer.title)
             } else {
-                leftoverLayers.filter(function(value, index, arr) {
-                    removeValue(value, index, arr, layer)
-                })
+                leftoverLayers = leftoverLayers.filter(function(value, index, arr) {
+                    return removeValue(value, index, arr, layer.title)
+                });
             }
             layerTitles.push(layer.title)
         }
         for (let layer of leftoverLayers) {
+            console.log("Deleting layer:", layer)
             deleteLayer(currentMap, allOverlays[layer]);
             delete allOverlays[layer];
         }
